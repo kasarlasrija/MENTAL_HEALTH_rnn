@@ -514,4 +514,8 @@ st.sidebar.write(
 
 "Built using TensorFlow + Streamlit"
 
+<<<<<<< HEAD
 )
+=======
+)
+>>>>>>> 08254705c2b5c97f0fa5a72ece1d95c8ea772472
