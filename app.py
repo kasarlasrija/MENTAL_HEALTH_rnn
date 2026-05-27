@@ -30,7 +30,7 @@ st.set_page_config(
 def load_resources():
 
     model = load_model(
-        "mental_health_rnn_model.h5"
+        "mental_health_rnn_model.keras"
     )
 
     with open(
