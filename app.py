@@ -1,4 +1,3 @@
-
 import streamlit as st
 import tensorflow as tf
 import numpy as np
@@ -10,66 +9,168 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 
 from nltk.corpus import stopwords
-from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-
-nltk.download("stopwords")
-
-stop_words = set(
-    stopwords.words("english")
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import (
+    Embedding,
+    SimpleRNN,
+    Dense,
+    Dropout
 )
 
-MAX_LEN = 100
+nltk.download(
+    "stopwords"
+)
+
+stop_words=set(
+    stopwords.words(
+        "english"
+    )
+)
+
+MAX_LEN=100
+VOCAB_SIZE=10000
 
 st.set_page_config(
-    page_title="Mental Health Monitor",
+
+    page_title=
+    "Mental Health Monitor",
+
     page_icon="🧠",
+
     layout="wide"
+
 )
+
+def build_model(
+    num_classes
+):
+
+    model=Sequential([
+
+        Embedding(
+
+            VOCAB_SIZE,
+
+            128,
+
+            input_length=MAX_LEN
+
+        ),
+
+        SimpleRNN(
+
+            128,
+
+            return_sequences=True
+
+        ),
+
+        Dropout(
+            0.3
+        ),
+
+        SimpleRNN(
+            64
+        ),
+
+        Dropout(
+            0.3
+        ),
+
+        Dense(
+
+            64,
+
+            activation='relu'
+
+        ),
+
+        Dense(
+
+            num_classes,
+
+            activation='softmax'
+
+        )
+
+    ])
+
+    return model
+
 
 @st.cache_resource
 def load_resources():
 
-    model = load_model(
-        "mental_health_rnn_model.keras"
+    with open(
+
+        "tokenizer.pkl",
+
+        "rb"
+
+    ) as f:
+
+        tokenizer=pickle.load(
+            f
+        )
+
+    with open(
+
+        "label_encoder.pkl",
+
+        "rb"
+
+    ) as f:
+
+        encoder=pickle.load(
+            f
+        )
+
+    num_classes=len(
+        encoder.classes_
     )
 
-    with open(
-        "tokenizer.pkl",
-        "rb"
-    ) as f:
+    model=build_model(
+        num_classes
+    )
 
-        tokenizer = pickle.load(f)
+    model.load_weights(
 
-    with open(
-        "label_encoder.pkl",
-        "rb"
-    ) as f:
+        "mental_health_weights.weights.h5"
 
-        encoder = pickle.load(f)
+    )
 
     return (
+
         model,
+
         tokenizer,
+
         encoder
+
     )
 
-model, tokenizer, encoder = load_resources()
+
+model,tokenizer,encoder=load_resources()
 
 
 def preprocess_text(text):
 
-    text = text.lower()
+    text=text.lower()
 
-    text = re.sub(
+    text=re.sub(
+
         r"[^\w\s]",
+
         "",
+
         text
+
     )
 
-    words = text.split()
+    words=text.split()
 
-    words = [
+    words=[
 
         word
 
@@ -79,330 +180,338 @@ def preprocess_text(text):
 
     ]
 
-    return " ".join(words)
+    return " ".join(
+        words
+    )
 
 
 def predict_sentiment(text):
 
-    processed = preprocess_text(
+    processed=preprocess_text(
         text
     )
 
-    sequence = tokenizer.texts_to_sequences(
+    seq=tokenizer.texts_to_sequences(
+
         [processed]
+
     )
 
-    padded = pad_sequences(
-        sequence,
+    padded=pad_sequences(
+
+        seq,
+
         maxlen=MAX_LEN,
+
         padding="post"
+
     )
 
-    pred = model.predict(
+    pred=model.predict(
+
         padded,
+
         verbose=0
+
     )[0]
 
-    index = np.argmax(pred)
+    index=np.argmax(
+        pred
+    )
 
-    label = encoder.inverse_transform(
+    emotion=encoder.inverse_transform(
+
         [index]
+
     )[0]
 
-    confidence = pred[index]
+    confidence=np.max(
+        pred
+    )
 
-    probabilities = dict(
+    probs=dict(
+
         zip(
+
             encoder.classes_,
+
             pred
+
         )
+
     )
 
     return (
-        label,
+
+        emotion,
+
         confidence,
-        probabilities,
+
+        probs,
+
         processed
+
     )
 
 
-guidance = {
+guidance={
 
-    "Anxiety":
-    "Take deep breaths and focus on one task at a time.",
+"Anxiety":
+"Take deep breaths and focus on one task at a time.",
 
-    "Depression":
-    "Talk with someone you trust and take a small positive step today.",
+"Depression":
+"Talk with someone you trust and take a small positive step today.",
 
-    "Stress":
-    "Take a short break and relax.",
+"Stress":
+"Take a short break and relax.",
 
-    "Normal":
-    "Keep maintaining healthy routines.",
+"Normal":
+"Keep maintaining healthy routines.",
 
-    "Suicidal":
-    "Please contact a trusted person or mental health professional.",
+"Suicidal":
+"Please contact trusted support immediately.",
 
-    "Bipolar":
-    "Maintain routines and reach out for support.",
+"Bipolar":
+"Maintain routines and seek support.",
 
-    "Personality disorder":
-    "Practice emotional awareness and journaling."
+"Personality disorder":
+"Practice emotional awareness."
 
 }
 
-activities = {
+activity={
 
-    "Anxiety":
-    "Go for a short walk",
+"Anxiety":
+"Go for a short walk",
 
-    "Depression":
-    "Listen to calming music",
+"Depression":
+"Listen to calming music",
 
-    "Stress":
-    "Try meditation",
+"Stress":
+"Try meditation",
 
-    "Normal":
-    "Continue positive habits",
+"Normal":
+"Continue positive habits",
 
-    "Suicidal":
-    "Talk to someone trusted",
+"Suicidal":
+"Talk with someone trusted",
 
-    "Bipolar":
-    "Maintain sleep schedule",
+"Bipolar":
+"Maintain sleep schedule",
 
-    "Personality disorder":
-    "Write a journal"
+"Personality disorder":
+"Write a journal"
 
 }
 
 
 st.sidebar.title(
-    "Navigation"
+"Navigation"
 )
 
-menu = st.sidebar.radio(
+menu=st.sidebar.radio(
 
-    "Menu",
+"Menu",
 
-    [
+[
 
-        "Home",
+"Home",
 
-        "About",
+"About",
 
-        "Prediction"
+"Prediction"
 
-    ]
+]
 
 )
 
-if menu == "Home":
+
+if menu=="Home":
 
     st.title(
-        "🧠 AI-Based Mental Health Sentiment Monitoring System"
-    )
+
+"🧠 AI-Based Mental Health Sentiment Monitoring System"
+
+)
 
     st.subheader(
-        "Emotion Detection using Simple Recurrent Neural Networks"
-    )
 
-    st.markdown("---")
+"Emotion Detection using Simple Recurrent Neural Networks"
 
-    st.write(
-
-"""
-This application analyzes emotional sentiment from text using Natural Language Processing and Simple RNN.
-
-It can:
-
-• Predict emotional category
-
-• Display confidence score
-
-• Visualize emotion probabilities
-
-• Provide emotional wellness guidance
-
-"""
 )
 
-if menu == "About":
+    st.write("""
+
+Analyze emotional sentiment patterns using NLP and RNN.
+
+• Emotion Detection
+
+• Probability Visualization
+
+• Confidence Scores
+
+• Wellness Guidance
+
+""")
+
+
+if menu=="About":
 
     st.header(
-        "About Project"
-    )
-
-    st.write(
-
-"""
-### Importance of Emotional AI
-
-Emotional AI helps identify emotional patterns in text.
-
-### NLP Applications
-
-- Mental wellness monitoring
-
-- Sentiment analysis
-
-- Counseling support systems
-
-- Emotional intelligence systems
-
-### Role of RNN
-
-Simple Recurrent Neural Networks learn sequential information.
-
-RNN remembers previous words using hidden states.
-
-Example:
-
-'I feel hopeless today'
-
-The network understands emotion using word order.
-"""
+"About Project"
 )
 
-if menu == "Prediction":
+    st.write("""
+
+Emotional AI detects emotional patterns from text.
+
+NLP Applications:
+
+• Sentiment Analysis
+
+• Mental Wellness
+
+• Counseling Systems
+
+Simple RNN learns sequence information using hidden states.
+
+Previous words influence future understanding.
+
+""")
+
+
+if menu=="Prediction":
 
     st.header(
-        "Analyze Emotion"
-    )
-
-    st.write(
-        "Example Inputs"
-    )
-
-    st.code(
-
-"""I feel hopeless and tired every day
-
-I feel nervous before exams
-
-I am excited for tomorrow
-
-Nobody understands me anymore"""
+"Analyze Emotion"
 )
 
-    user_input = st.text_area(
+    text=st.text_area(
 
-        "Enter your thoughts or feelings here...",
+"Enter your thoughts or feelings here...",
 
-        height=180
+height=180
 
-    )
+)
 
     if st.button(
-        "Analyze Emotion"
-    ):
 
-        if user_input.strip() == "":
+"Analyze Emotion"
+
+):
+
+        if text.strip()=="":
 
             st.warning(
-                "Please enter text."
-            )
+"Enter text"
+)
 
         else:
 
-            emotion, confidence, probs, processed = predict_sentiment(
-                user_input
+            emotion,confidence,probs,processed=\
+
+            predict_sentiment(
+                text
             )
 
             st.success(
-                f"Emotion Detected: {emotion}"
-            )
+
+f"Emotion Detected: {emotion}"
+
+)
 
             st.metric(
-                "Confidence",
-                f"{confidence*100:.2f}%"
-            )
+
+"Confidence",
+
+f"{confidence*100:.2f}%"
+
+)
 
             st.info(
-                guidance.get(
-                    emotion,
-                    "Stay positive."
-                )
-            )
+
+guidance.get(
+
+emotion,
+
+"Stay positive"
+
+)
+
+)
 
             st.success(
 
-                "Suggested Activity: "
+"Suggested Activity: "
 
-                +
++
 
-                activities.get(
-                    emotion,
-                    "Take a short break"
-                )
+activity.get(
 
-            )
+emotion,
 
-            st.subheader(
-                "Processed Input"
-            )
+"Take a break"
+
+)
+
+)
 
             st.code(
-                processed
-            )
+processed
+)
 
-            st.subheader(
-                "Emotion Probability Distribution"
-            )
+            df=pd.DataFrame({
 
-            chart_df = pd.DataFrame({
+"Emotion":
+list(probs.keys()),
 
-                "Emotion":
-                list(probs.keys()),
+"Probability":
+list(probs.values())
 
-                "Probability":
-                list(probs.values())
+})
 
-            })
+            fig=px.bar(
 
-            fig = px.bar(
+df,
 
-                chart_df,
+x="Emotion",
 
-                x="Emotion",
+y="Probability",
 
-                y="Probability",
+title="Emotion Probability"
 
-                title="Emotion Confidence Scores"
-
-            )
+)
 
             st.plotly_chart(
-                fig,
-                use_container_width=True
-            )
 
-            st.subheader(
-                "Confidence Graph"
-            )
+fig,
 
-            fig2, ax = plt.subplots(
-                figsize=(6,4)
-            )
+use_container_width=True
+
+)
+
+            fig2,ax=\
+
+            plt.subplots()
 
             ax.bar(
 
-                chart_df["Emotion"],
+df["Emotion"],
 
-                chart_df["Probability"]
+df["Probability"]
 
-            )
+)
 
             plt.xticks(
-                rotation=45
-            )
+rotation=45
+)
 
             st.pyplot(
-                fig2
-            )
-
-st.sidebar.markdown("---")
+fig2
+)
 
 st.sidebar.write(
-    "Built with TensorFlow + Streamlit"
+
+"Built using TensorFlow + Streamlit"
+
 )
