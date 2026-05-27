@@ -1,5 +1,4 @@
 import streamlit as st
-import tensorflow as tf
 import numpy as np
 import pickle
 import re
@@ -9,13 +8,21 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 
 from nltk.corpus import stopwords
+
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+
 from tensorflow.keras.models import Sequential
+
 from tensorflow.keras.layers import (
+
     Embedding,
+
     SimpleRNN,
+
     Dense,
+
     Dropout
+
 )
 
 nltk.download(
@@ -29,6 +36,7 @@ stop_words=set(
 )
 
 MAX_LEN=100
+
 VOCAB_SIZE=10000
 
 st.set_page_config(
@@ -42,9 +50,8 @@ st.set_page_config(
 
 )
 
-def build_model(
-    num_classes
-):
+
+def build_model(num_classes):
 
     model=Sequential([
 
@@ -82,7 +89,7 @@ def build_model(
 
             64,
 
-            activation='relu'
+            activation="relu"
 
         ),
 
@@ -90,11 +97,21 @@ def build_model(
 
             num_classes,
 
-            activation='softmax'
+            activation="softmax"
 
         )
 
     ])
+
+    model.compile(
+
+        optimizer="adam",
+
+        loss="categorical_crossentropy",
+
+        metrics=["accuracy"]
+
+    )
 
     return model
 
@@ -110,9 +127,7 @@ def load_resources():
 
     ) as f:
 
-        tokenizer=pickle.load(
-            f
-        )
+        tokenizer=pickle.load(f)
 
     with open(
 
@@ -122,16 +137,14 @@ def load_resources():
 
     ) as f:
 
-        encoder=pickle.load(
-            f
-        )
-
-    num_classes=len(
-        encoder.classes_
-    )
+        encoder=pickle.load(f)
 
     model=build_model(
-        num_classes
+
+        len(
+            encoder.classes_
+        )
+
     )
 
     model.load_weights(
@@ -225,8 +238,10 @@ def predict_sentiment(text):
 
     )[0]
 
-    confidence=np.max(
-        pred
+    confidence=float(
+
+        np.max(pred)
+
     )
 
     probs=dict(
@@ -269,15 +284,16 @@ guidance={
 "Keep maintaining healthy routines.",
 
 "Suicidal":
-"Please contact trusted support immediately.",
+"Please contact a trusted person or professional support immediately.",
 
 "Bipolar":
-"Maintain routines and seek support.",
+"Maintain routines and seek support if needed.",
 
 "Personality disorder":
-"Practice emotional awareness."
+"Practice emotional awareness and journaling."
 
 }
+
 
 activity={
 
@@ -340,15 +356,19 @@ if menu=="Home":
 
 )
 
+    st.markdown("---")
+
     st.write("""
 
-Analyze emotional sentiment patterns using NLP and RNN.
+This application uses NLP and Simple RNN to analyze emotional sentiment.
+
+Features:
 
 • Emotion Detection
 
-• Probability Visualization
+• Confidence Score
 
-• Confidence Scores
+• Probability Visualization
 
 • Wellness Guidance
 
@@ -363,19 +383,27 @@ if menu=="About":
 
     st.write("""
 
+### Emotional AI
+
 Emotional AI detects emotional patterns from text.
 
-NLP Applications:
-
-• Sentiment Analysis
+### NLP Applications
 
 • Mental Wellness
 
-• Counseling Systems
+• Counseling Assistance
 
-Simple RNN learns sequence information using hidden states.
+• Sentiment Analysis
 
-Previous words influence future understanding.
+• Emotional Monitoring
+
+### Role of RNN
+
+Simple RNN learns sequential information.
+
+It remembers previous words using hidden states.
+
+This helps understand emotional context.
 
 """)
 
@@ -384,6 +412,20 @@ if menu=="Prediction":
 
     st.header(
 "Analyze Emotion"
+)
+
+    st.code(
+
+"""Examples:
+
+I feel hopeless and tired every day
+
+I feel nervous before exams
+
+I am excited for tomorrow
+
+Nobody understands me anymore"""
+
 )
 
     text=st.text_area(
@@ -403,7 +445,7 @@ height=180
         if text.strip()=="":
 
             st.warning(
-"Enter text"
+"Please enter text."
 )
 
         else:
@@ -434,7 +476,7 @@ guidance.get(
 
 emotion,
 
-"Stay positive"
+"Stay positive."
 
 )
 
@@ -450,14 +492,22 @@ activity.get(
 
 emotion,
 
-"Take a break"
+"Take a short break"
 
 )
 
+)
+
+            st.subheader(
+"Processed Input"
 )
 
             st.code(
 processed
+)
+
+            st.subheader(
+"Emotion Probability Distribution"
 )
 
             df=pd.DataFrame({
@@ -478,7 +528,7 @@ x="Emotion",
 
 y="Probability",
 
-title="Emotion Probability"
+title="Emotion Confidence Scores"
 
 )
 
@@ -488,6 +538,10 @@ fig,
 
 use_container_width=True
 
+)
+
+            st.subheader(
+"Confidence Graph"
 )
 
             fig2,ax=\
@@ -510,12 +564,10 @@ rotation=45
 fig2
 )
 
+st.sidebar.markdown("---")
+
 st.sidebar.write(
 
 "Built using TensorFlow + Streamlit"
 
-<<<<<<< HEAD
 )
-=======
-)
->>>>>>> 08254705c2b5c97f0fa5a72ece1d95c8ea772472
